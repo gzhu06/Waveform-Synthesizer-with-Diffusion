@@ -8,7 +8,7 @@
 - [ ] Notes
 
 ### Evaulation of Unconditional Generators
-We compare different frameworks by testing on sc09 dataset using [unconditional audio generation benchmark repo](https://github.com/gzhu06/unconditional-waveform-synthesizer-with-diffusion).
+We compare different frameworks by testing on sc09 dataset using [unconditional audio generation benchmark repo](https://github.com/gzhu06/Unconditional-Audio-Generation-Benchmark).
 
 ## References
 - [DiffWave: A Versatile Diffusion Model for Audio Synthesis](https://arxiv.org/pdf/2009.09761.pdf)
