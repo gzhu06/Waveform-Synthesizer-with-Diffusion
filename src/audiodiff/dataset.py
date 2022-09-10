@@ -1,0 +1,65 @@
+# Copyright 2020 LMNT, Inc. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ==============================================================================
+
+import numpy as np
+import os
+import random
+import torch
+import torch.nn.functional as F
+import torchaudio
+
+from glob import glob
+from torch.utils.data.distributed import DistributedSampler
+
+class UnconditionalDataset(torch.utils.data.Dataset):
+    def __init__(self, paths):
+        super().__init__()
+        self.filenames = []
+        for path in paths:
+            self.filenames += glob(f'{path}/**/*.wav', recursive=True)
+            
+    def __len__(self):
+        return len(self.filenames)
+    
+    def __getitem__(self, idx):
+        audio_filename = self.filenames[idx]
+        signal, _ = torchaudio.load(audio_filename)
+        return {'audio': signal[0]}
+
+class Collator:
+    def __init__(self, params):
+        self.params = params
+        
+    def collate(self, minibatch):
+        for record in minibatch:
+            if len(record['audio']) > self.params.audio_len:
+                start = random.randint(0, record['audio'].shape[-1] - self.params.audio_len)
+                end = start + self.params.audio_len
+                record['audio'] = record['audio'][start:end]
+            elif len(record['audio']) < self.params.audio_len:
+                record['audio'] = np.pad(record['audio'], (0, self.params.audio_len - len(record['audio'])), mode='constant')
+                
+        audio = np.stack([record['audio'] for record in minibatch if 'audio' in record])
+        
+        return {'audio': torch.from_numpy(audio)}
+
+def from_path(data_dirs, params, is_distributed=False):
+    dataset = UnconditionalDataset(data_dirs)
+    return torch.utils.data.DataLoader(dataset,batch_size=params.batch_size,
+                                     collate_fn=Collator(params).collate,
+                                     shuffle=not is_distributed,
+                                     num_workers=os.cpu_count(),
+                                     sampler=DistributedSampler(dataset) if is_distributed else None,
+                                     pin_memory=False, drop_last=True)

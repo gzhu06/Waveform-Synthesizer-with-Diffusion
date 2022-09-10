@@ -31,19 +31,36 @@ class AttrDict(dict):
 
 params = AttrDict(
     # Training params
-    batch_size=3,
-    learning_rate=2e-4,
     max_grad_norm=None,
+    batch_size=48,
+    learning_rate = 1e-4,
+    beta1 = 0.9,
+    beta2 = 0.99,
 
     # Data params
     sample_rate=16000,
 
     # Model params
-    residual_layers=36,
-    residual_channels=256,
-    dilation_cycle=12,
-    noise_schedule=np.linspace(1e-4, 0.02, 200).tolist(),
+    in_channels = 1,
+    channels = 128,
+    patch_size = 16,
+    resnet_groups = 8,
+    kernel_multiplier_downsample = 2,
+    kernel_sizes_init = [1, 3, 7],
+    multipliers = [1, 2, 4, 4, 4, 4, 4],
+    factors = [4, 4, 4, 2, 2, 2],
+    num_blocks = [2, 2, 2, 2, 2, 2],
+    attentions = [False, False, False, True, True, True],
+    attention_heads = 8,
+    attention_features = 64,
+    attention_multiplier = 2,
+    use_nearest_upsample = False,
+    use_skip_scale = True,
+    use_attention_bottleneck = True,
+    diffusion_sigma_data = 0.2,
+    diffusion_dynamic_threshold = 0.0,
+    noise_schedule = np.linspace(1e-4, 0.02, 200).tolist(),
 
     # unconditional sample len
-    audio_len = 16000*1, # unconditional_synthesis_samples
+    audio_len = 2**14, # unconditional_synthesis_samples
 )

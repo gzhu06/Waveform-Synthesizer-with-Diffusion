@@ -22,9 +22,8 @@ from torch.nn.parallel import DistributedDataParallel
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 
-from diffwave.dataset import from_path
-from diffwave.model import DiffWave
-from diffwave.inference import diffusion_paramters
+from dataset import from_path
+from model import AudioDiffusionModel
 
 def _nested_map(struct, map_fn):
     if isinstance(struct, tuple):
@@ -49,10 +48,6 @@ class DiffWaveLearner:
         self.step = 0
         self.is_master = True
 
-        beta = np.array(self.params.noise_schedule)
-        noise_level = np.cumprod(1 - beta)
-        self.noise_level = torch.tensor(noise_level.astype(np.float32))
-        self.loss_fn = nn.MSELoss() #nn.L1Loss() 
         self.summary_writer = None
 
     def state_dict(self):
@@ -107,7 +102,7 @@ class DiffWaveLearner:
                 if self.is_master:
                     if self.step % 50 == 0:
                         self._write_summary(self.step, features, loss)
-                    if self.step % len(self.dataset) == 0:
+                    if self.step % 50000 == 0:
                         self.save_to_checkpoint()
                 self.step += 1
 
@@ -115,19 +110,11 @@ class DiffWaveLearner:
         for param in self.model.parameters():
             param.grad = None
 
-        audio = features['audio']
-        N, T = audio.shape
+        audio = features['audio'].unsqueeze(1)
+        N, _, T = audio.shape
         device = audio.device
-        self.noise_level = self.noise_level.to(device)
         with self.autocast:
-            t = torch.randint(len(self.params.noise_schedule), [N], device=audio.device)
-            noise_scale = self.noise_level[t].unsqueeze(1)
-            noise_scale_sqrt = noise_scale**0.5
-            noise = torch.randn_like(audio)
-            noisy_audio = noise_scale_sqrt * audio + (1.0 - noise_scale)**0.5 * noise
-            
-            predicted = self.model(noisy_audio, t)
-            loss = self.loss_fn(noise, predicted.squeeze(1))
+            loss = self.model(audio)
 
         self.scaler.scale(loss).backward()
         self.scaler.unscale_(self.optimizer)
@@ -141,21 +128,15 @@ class DiffWaveLearner:
         device = torch.device('cuda', 0)
         with torch.no_grad():
             # audio initialization
-            audio = torch.randn(1, self.params.audio_len).to(device)
-            alpha, alpha_bar, beta_tilda, sigma = diffusion_paramters(self.params)
-            for t in tqdm(range(len(alpha_bar)-1, -1, -1)):
-                epsilon_theta = self.model(audio, torch.tensor([t], device=audio.device)).squeeze(1)
-                audio = (audio-(1-alpha[t])/torch.sqrt(1-alpha_bar[t])*epsilon_theta)/torch.sqrt(alpha[t])
-                if t > 0:
-                    noise = torch.randn_like(audio)
-                    audio = audio + sigma[t]*noise
-        return audio
+            audio = torch.randn(1, 1, self.params.audio_len).to(device)
+            sampled = self.model.sample(noise=audio, num_steps=50)
+        return sampled
 
     def _write_summary(self, step, features, loss):
         writer = self.summary_writer or SummaryWriter(self.model_dir, purge_step=step)
         writer.add_audio('feature/audio_gt', features['audio'][0], step,
                          sample_rate=self.params.sample_rate)
-        if step % 3000 == 0:
+        if step % 1000 == 0:
             print('generating audio:')
             audio_pre = self.inference()
             writer.add_audio('feature/audio_pred', audio_pre[0], step,
@@ -167,7 +148,8 @@ class DiffWaveLearner:
 
 def _train_impl(replica_id, model, dataset, args, params):
     torch.backends.cudnn.benchmark = True
-    opt = torch.optim.Adam(model.parameters(), lr=params.learning_rate)
+    opt = torch.optim.Adam(model.parameters(), lr=params.learning_rate, 
+                           betas=(params.beta1, params.beta2),)
     
     learner = DiffWaveLearner(args.model_dir, model, dataset, opt, params, fp16=args.fp16)
     learner.is_master = (replica_id == 0)
@@ -176,7 +158,7 @@ def _train_impl(replica_id, model, dataset, args, params):
 
 def train(args, params):
     dataset = from_path(args.data_dirs, params)
-    model = DiffWave(params).cuda()
+    model = AudioDiffusionModel(params).cuda()
     _train_impl(0, model, dataset, args, params)
 
 def train_distributed(replica_id, replica_count, port, args, params):
@@ -188,6 +170,6 @@ def train_distributed(replica_id, replica_count, port, args, params):
     dataset = from_path(args.data_dirs, params, is_distributed=True)
     device = torch.device('cuda', replica_id)
     torch.cuda.set_device(device)
-    model = DiffWave(params).to(device)
+    model = AudioDiffusionModel(params).to(device)
     model = DistributedDataParallel(model, device_ids=[replica_id])
     _train_impl(replica_id, model, dataset, args, params)

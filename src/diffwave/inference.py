@@ -61,7 +61,7 @@ def predict(model_dir=None, params=None,
                 noise = torch.randn_like(audio)
                 audio = audio + sigma[t] * noise
                 
-    return audio
+    return audio, model.params.sample_rate
 
 def main(args):
     audio, sr = predict(model_dir=args.model_dir, 
