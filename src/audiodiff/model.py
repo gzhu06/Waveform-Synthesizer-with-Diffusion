@@ -1,7 +1,5 @@
-import random
-from typing import Optional, Sequence, Union
+from typing import Optional, Sequence
 
-import torch
 from torch import Tensor, nn
 
 from diffusion import (
@@ -14,8 +12,7 @@ from diffusion import (
     Sampler,
     Schedule,
 )
-from modules import Encoder1d, ResnetBlock1d, UNet1d
-from utils import default, prod, to_list
+from modules import UNet1d
 
 """ Diffusion Classes (generic for 1d data) """
 

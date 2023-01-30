@@ -47,22 +47,11 @@ def predict(model_dir=None, params=None,
     model.load_state_dict(checkpoint['model'])
     model.eval()
     
-#     alpha, alpha_bar, beta_tilda, sigma = diffusion_paramters(model.params)
     with torch.no_grad():
         
         audio = torch.randn(num_wavs, 1, params.audio_len).to(device)
         sampled = model.sample(noise=audio, num_steps=50)
     
-#         # audio initialization
-#         audio = torch.randn(1, params.audio_len, device=device)
-#         for t in range(len(alpha_bar)-1, -1, -1):
-
-#             epsilon_theta = model(audio, torch.tensor([t], device=audio.device)).squeeze(1)
-#             audio = (audio-(1-alpha[t])/torch.sqrt(1-alpha_bar[t])*epsilon_theta)/torch.sqrt(alpha[t]) 
-
-#             if t > 0:
-#                 noise = torch.randn_like(audio)
-#                 audio = audio + sigma[t] * noise
     return sampled.squeeze(1), params.sample_rate
 
 def main(args):
