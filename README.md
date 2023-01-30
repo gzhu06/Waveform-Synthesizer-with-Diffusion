@@ -11,7 +11,7 @@
 We compare different frameworks by testing on sc09 dataset using [unconditional audio generation benchmark repo](https://github.com/gzhu06/Unconditional-Audio-Generation-Benchmark).
 
 | System    |  Backbone   | Sampler |FID | Inception  | mInception | AM | 
-|-----------|----|-----|------------|---------|--------|
+|-----------|------------|-----------|-------|---------|--------|--------|
 |[diffwave](https://github.com/philsyn/DiffWave-unconditional)  | WaveNet | AS|1.80|5.70|51.88|0.65|
 |[audiodiff](https://github.com/archinetai/audio-diffusion-pytorch)  | UNet1d | AS|1.51|7.07|105.8|0.471|
 
