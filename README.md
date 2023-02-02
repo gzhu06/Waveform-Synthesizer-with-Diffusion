@@ -1,8 +1,20 @@
 # Waveform Synthesizer with Diffusion Models (WIP)
-(Self taught leanring materials) Diffusion based waveforom synthesizer. A collection or (re)implementations of interesting audio related diffusion models. Trainging framework is based on the [Diffwave repo](https://github.com/lmnt-com/diffwave). 
+(Self use codebase) Diffusion based waveforom synthesizer. A collection or (re)implementations of interesting audio related diffusion models. Trainging framework is based on the [Diffwave repo](https://github.com/lmnt-com/diffwave). 
+
+# Usage
+
+Training: run 
+```
+python main.py --model_dir /path/to/ckpt --data_dirs /path/to/wavs 
+```
+
+Inference: run 
+```
+python inference.py --model_dir /path/to/ckpt --output /path/to/audio --num_wavs 512
+```
 
 # TODO
-- [ ] Unconditional diffusion
+- [X] Unconditional diffusion
 - [ ] Unconditional diffusion w and w/o guidance
 - [ ] Conditional diffusion: Encoder(Conditioner) + Decoder(Vocoder)
 - [ ] Notes

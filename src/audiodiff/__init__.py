@@ -15,4 +15,4 @@ from .model import (
     AudioDiffusionModel,
     Model1d,
 )
-from .modules import Encoder1d, UNet1d
+from .modules import UNet1d

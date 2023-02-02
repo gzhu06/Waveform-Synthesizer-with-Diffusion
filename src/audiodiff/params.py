@@ -58,8 +58,7 @@ params = AttrDict(
     use_skip_scale = True,
     use_attention_bottleneck = True,
     diffusion_sigma_data = 0.2,
-    diffusion_dynamic_threshold = 0.0,
-    noise_schedule = np.linspace(1e-4, 0.02, 200).tolist(),
+    diffusion_dynamic_threshold = 0.0
 
     # unconditional sample len
     audio_len = 2**14, # unconditional_synthesis_samples
