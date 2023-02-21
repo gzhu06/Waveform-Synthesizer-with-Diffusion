@@ -70,17 +70,6 @@ class Sampler(nn.Module):
     ) -> Tensor:
         raise NotImplementedError()
 
-    def inpaint(
-        self,
-        source: Tensor,
-        mask: Tensor,
-        fn: Callable,
-        sigmas: Tensor,
-        num_steps: int,
-        num_resamples: int,
-    ) -> Tensor:
-        raise NotImplementedError("Inpainting not available with current sampler")
-
 
 class KarrasSampler(Sampler):
     """https://arxiv.org/abs/2206.00364 algorithm 1"""
@@ -201,31 +190,6 @@ class ADPM2Sampler(Sampler):
         for i in range(num_steps - 1):
             x = self.step(x, fn=fn, sigma=sigmas[i], sigma_next=sigmas[i + 1])  # type: ignore # noqa
         return x
-
-    def inpaint(
-        self,
-        source: Tensor,
-        mask: Tensor,
-        fn: Callable,
-        sigmas: Tensor,
-        num_steps: int,
-        num_resamples: int,
-    ) -> Tensor:
-        x = sigmas[0] * torch.randn_like(source)
-
-        for i in range(num_steps - 1):
-            # Noise source to current noise level
-            source_noisy = source + sigmas[i] * torch.randn_like(source)
-            for r in range(num_resamples):
-                # Merge noisy source and current then denoise
-                x = source_noisy * mask + x * ~mask
-                x = self.step(x, fn=fn, sigma=sigmas[i], sigma_next=sigmas[i + 1])  # type: ignore # noqa
-                # Renoise if not last resample step
-                if r < num_resamples - 1:
-                    sigma = sqrt(sigmas[i] ** 2 - sigmas[i + 1] ** 2)
-                    x = x + sigma * torch.randn_like(x)
-
-        return source * mask + x * ~mask
 
 
 """ Diffusion Classes """
